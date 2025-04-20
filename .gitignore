@@ -1,0 +1,21 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+.env
+
+# Firebase service account key
+serviceAccountKey.json
+
+# IDE configs
+.vscode/
+.idea/
+
+# macOS system files
+.DS_Store
+
+# Render build files (optional)
+build/
