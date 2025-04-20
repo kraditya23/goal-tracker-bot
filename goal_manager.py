@@ -27,16 +27,19 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # === Add Goal ===
 async def add_goal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
-    try:
-        goal_text = " ".join(context.args)
-        db.collection("users").document(user_id).collection("goals").add({
-            "goal": goal_text,
-            "status": "pending",
-            "created_at": datetime.now()
-        })
-        await update.message.reply_text(f"✅ Goal added: {goal_text}")
-    except Exception as e:
+    goal_text = " ".join(context.args)
+
+    if not goal_text:
         await update.message.reply_text("⚠️ Usage: /addgoal <goal>")
+        return
+    
+    db.collection("users").document(user_id).collection("goals").add({
+        "goal": goal_text,
+        "status": "pending",
+        "created_at": datetime.now()
+    })
+
+    await update.message.reply_text(f"✅ Goal added: {goal_text}")
 
 
 # === Remove Goal (Step 1) ===
@@ -140,7 +143,8 @@ async def get_today_summary_text(user_id: str) -> str:
         entry_doc = entry_ref.get()
         if entry_doc.exists:
             response = entry_doc.to_dict().get("response", "N/A").capitalize()
-            tracker_lines.append(f"{habit_name}: {response}")
+            status_emoji = "✅" if response == 'Yes' else "❌"
+            tracker_lines.append(f"{habit_name}: {status_emoji}")
         else:
             tracker_lines.append(f"{habit_name}: ❓ Not answered")
 
