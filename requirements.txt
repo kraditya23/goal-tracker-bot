@@ -2,3 +2,4 @@ python-telegram-bot==22.0
 firebase-admin
 APScheduler
 python-dotenv
+pytz
