@@ -1,9 +1,13 @@
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ContextTypes
 from firebase_init import db
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, time, timedelta
+from pytz import timezone
 
 
+IST = timezone("Asia/Kolkata")
+
+## Handler for /start command: sends a welcome message and instructions to the user.
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 Welcome to *Goal Tracker Bot*! I'm here to help you stay productive and build habits.\n\n"
@@ -25,8 +29,10 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # === Add Goal ===
+## Handler for /addgoal command: adds a new goal to the user's Firestore collection.
 async def add_goal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
+    # Combine command arguments to form the goal text.
     goal_text = " ".join(context.args)
 
     if not goal_text:
@@ -36,13 +42,14 @@ async def add_goal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.collection("users").document(user_id).collection("goals").add({
         "goal": goal_text,
         "status": "pending",
-        "created_at": datetime.now()
+        "created_at": datetime.now(IST)
     })
 
     await update.message.reply_text(f"✅ Goal added: {goal_text}")
 
 
 # === Remove Goal (Step 1) ===
+## Handler for /removegoal command: lists pending goals for removal.
 async def remove_goal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     goals_ref = db.collection("users").document(user_id).collection("goals")
@@ -62,6 +69,7 @@ async def remove_goal(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # === Mark Completed (Step 1) ===
+## Handler for /markcompleted command: lists pending goals to be marked as completed.
 async def mark_goal_completed(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     goals_ref = db.collection("users").document(user_id).collection("goals")
@@ -81,6 +89,7 @@ async def mark_goal_completed(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 # === Handle Selection (Step 2) ===
+## Processes the user's numeric selection for goal removal or completion.
 async def handle_user_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     user_doc = db.collection("users").document(user_id)
@@ -116,14 +125,16 @@ async def handle_user_selection(update: Update, context: ContextTypes.DEFAULT_TY
         await update.message.reply_text("⚠️ Please reply with a number.")
 
 
+## Generates today's summary text including goals and habit tracker responses.
 async def get_today_summary_text(user_id: str) -> str:
-    today = date.today()
-    start_dt = datetime.combine(today, time(0, 0))
+    now = datetime.now(IST)
+    today = now.date()
+    start_dt = datetime.combine(today, time(0, 0, tzinfo=IST))
     end_dt = start_dt + timedelta(days=1)
     today_str = today.isoformat()
 
     goals_ref = db.collection("users").document(user_id).collection("goals")
-    docs = goals_ref.where("created_at", ">=", start_dt).where("created_at", "<", end_dt).stream()
+    docs = list(goals_ref.where("created_at", ">=", start_dt).where("created_at", "<", end_dt).stream())
 
     lines = []
     for doc in docs:
@@ -153,16 +164,75 @@ async def get_today_summary_text(user_id: str) -> str:
 
     return summary
 
+## Generates a detailed midnight summary including goal completion percentages and habit tracking.
+async def get_detailed_midnight_summary(user_id: str) -> str:
+    now = datetime.now(IST)
+    today = now.date()
+    start_dt = datetime.combine(today, time(0, 0, tzinfo=IST))
+    end_dt = start_dt + timedelta(days=1)
+    today_str = today.isoformat()
 
+    summary_lines = [f"📅 Summary for {today_str}"]
+
+    # === GOALS ===
+    goals_ref = db.collection("users").document(user_id).collection("goals")
+    goal_docs = list(goals_ref.where("created_at", ">=", start_dt).where("created_at", "<", end_dt).stream())
+
+    if goal_docs:
+        completed = [doc for doc in goal_docs if doc.to_dict().get("status") == "completed"]
+        pending = [doc for doc in goal_docs if doc.to_dict().get("status") != "completed"]
+        total = len(goal_docs)
+        percent = (len(completed) / total) * 100 if total else 0
+
+        summary_lines.append("\n🎯 GOALS:")
+        summary_lines.append(f"Percentage of goals completed: {percent:.0f}%")
+
+        if completed:
+            summary_lines.append("\n✅ Completed:")
+            for doc in completed:
+                summary_lines.append(f"- {doc.to_dict().get('goal')}")
+
+        if pending:
+            summary_lines.append("\n❌ Missed:")
+            for doc in pending:
+                summary_lines.append(f"- {doc.to_dict().get('goal')}")
+    else:
+        summary_lines.append("\n🎯 GOALS:\nNo goals set for today.")
+
+    # === HABITS ===
+    summary_lines.append("\n🧠 HABITS:")
+    habits_ref = list(db.collection("users").document(user_id).collection("trackers").list_documents())
+
+    if habits_ref:
+        for habit_doc in habits_ref:
+            habit_name = habit_doc.id
+            entries_ref = habit_doc.collection("entries").stream()
+            yes_count, total_entries = 0, 0
+            for entry in entries_ref:
+                resp = entry.to_dict().get("response", "").lower()
+                if resp:
+                    total_entries += 1
+                    if resp == "yes":
+                        yes_count += 1
+            percent = (yes_count / total_entries) * 100 if total_entries else 0
+            summary_lines.append(f"- {habit_name}: {percent:.0f}%")
+    else:
+        summary_lines.append("No habits tracking for this month.")
+
+    return "\n".join(summary_lines)
+
+
+## Handler for /summary command: sends today's goal and habit summary to the user.
 async def summary_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     #Handler for /summary — sends today’s goal summary on demand.
     user_id = str(update.effective_user.id)
     text = await get_today_summary_text(user_id)
     await update.message.reply_text(text)
 
+## Handler for /monthlytrackers command: prompts the user to answer daily habit tracking questions.
 async def monthly_trackers(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
-    today_str = date.today().isoformat()
+    today_str = datetime.now(IST).date().isoformat()
 
     # Dynamically load user's habits
     habit_docs = db.collection("users").document(user_id).collection("trackers").list_documents()
@@ -191,10 +261,11 @@ async def monthly_trackers(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ All trackers already recorded for today.")
 
 
+## Processes the user's response for habit tracking and schedules the next tracker if available.
 async def handle_tracker_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     response = update.message.text.strip().lower()
-    today_str = date.today().isoformat()
+    today_str = datetime.now(IST).date().isoformat()
 
     if "current_tracker_habit" not in context.user_data:
         return
@@ -219,7 +290,9 @@ async def handle_tracker_response(update: Update, context: ContextTypes.DEFAULT_
     # Ask next habit
     await monthly_trackers(update, context)
 
+
 # === Add Habit ===
+## Handler for /addhabit command: adds a new habit to track in Firestore.
 async def add_habit_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     habit_text = " ".join(context.args).strip()
@@ -233,7 +306,9 @@ async def add_habit_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(f"✅ Habit added: {habit_text}")
 
+
 # === Remove Habit ===
+## Handler for /removehabit command: lists habits available for removal.
 async def remove_habit_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
 
@@ -248,7 +323,9 @@ async def remove_habit_command(update: Update, context: ContextTypes.DEFAULT_TYP
     habit_list = "\n".join([f"{i+1}. {name}" for i, name in enumerate(habit_names)])
     await update.message.reply_text(f"Select the habit to remove by sending a number:\n{habit_list}")
 
+
 # === Handle Habit Removal Selection ===
+## Processes the user's numeric selection to remove a habit from tracking.
 async def handle_habit_removal_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
 

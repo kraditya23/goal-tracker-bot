@@ -1,6 +1,6 @@
 # 📅 Telegram Goal Tracker Bot
 
-A personal productivity Telegram bot to help you plan, track, and reflect on your daily goals and habits. Add goals, track habits daily, mark tasks complete, and receive daily summaries automatically at midnight IST.
+Boost your productivity with this personal Telegram bot designed to help you plan, track, and reflect on your daily goals and habits. Stay consistent, monitor your performance, and receive automated summaries every night — all via Telegram.
 
 👉 Try it now: [@goal_tracker23_bot](https://t.me/goal_tracker23_bot)
 
@@ -8,7 +8,7 @@ A personal productivity Telegram bot to help you plan, track, and reflect on you
 
 ## ✨ Features
 
-### 📌 Daily Goals
+### 🎯 Daily Goals
 - `/addgoal <goal>` – Add a new goal for today (e.g. `/addgoal Gym`)
 - `/removegoal` – Shows a numbered list of today’s goals to remove
 - `/markcompleted` – Mark a goal as completed by selecting its number
@@ -21,8 +21,8 @@ A personal productivity Telegram bot to help you plan, track, and reflect on you
 - `/monthlytrackers` – Log your habits for the day with Yes / No / Later options
 - ❌ If not filled by 00:00, unanswered habits are marked "no" automatically
 
-### 🧾 Coming Soon
-- 📈 Monthly PDF summary of goals and habit completion rates
+### 📄 Coming Soon
+- 📈 Monthly PDF reports summarizing your goal and habit progress
 
 ---
 
@@ -30,18 +30,35 @@ A personal productivity Telegram bot to help you plan, track, and reflect on you
 
 - **Python**
 - **python-telegram-bot v20+**
-- **Firebase Firestore** (via `firebase-admin`)
-- **APScheduler** – for daily job scheduling
-- **Render** – for cloud deployment
-- **dotenv** – for environment variable management
+- **Firebase Firestore** (`firebase-admin`)
+- **APScheduler** – For job scheduling (e.g. 00:00 summaries)
+- **Railway** – Deployment platform
+- **python-dotenv** – Manages environment variables
 
 ---
 
-## 📦 Installation
+## 🚀 Installation
 
 ```bash
 git clone https://github.com/kraditya23/goal-tracker-bot.git
 cd goal-tracker-bot
 python3 -m venv venv
-source venv/bin/activate
+source venv/bin/activate  # Use 'venv\Scripts\activate' on Windows
 pip install -r requirements.txt
+```
+
+### 🔐 Setup
+
+1. Create a `.env` file in the root directory and add your Telegram bot token:
+   ```
+   TELEGRAM_BOT_TOKEN=your_token_here
+   ```
+
+2. Add your Firebase service account file as `serviceAccountKey.json` in the root directory.
+
+You're ready to run the bot with:
+```bash
+python main.py
+```
+
+---

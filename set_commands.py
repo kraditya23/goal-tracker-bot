@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
+## Sets Telegram bot commands to enhance user interaction.
 async def force_set_commands():
     bot = Bot(token=TOKEN)
     commands = [

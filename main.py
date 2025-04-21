@@ -1,4 +1,4 @@
-from telegram.ext import (ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters)
+from telegram.ext import (ApplicationBuilder, CommandHandler, MessageHandler, filters)
 from goal_manager import (add_goal, 
                           remove_goal, 
                           mark_goal_completed, 
@@ -7,7 +7,6 @@ from goal_manager import (add_goal,
                           start_command,
                           monthly_trackers,
                           handle_tracker_response,
-                          get_today_summary_text,
                           add_habit_command,
                           remove_habit_command,
                           handle_habit_removal_selection
@@ -16,15 +15,16 @@ from scheduler import start_apscheduler
 import os
 from dotenv import load_dotenv
 import asyncio
-from datetime import date, datetime, time, timedelta
 
 load_dotenv()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
+## Main function to initialize and start the Telegram bot, set up command and message handlers, and start the scheduler.
 async def start_bot():
+    # Build the Telegram bot application with the provided token.
     app = ApplicationBuilder().token(TOKEN).build()
 
-    # Command handlers
+    # Register command handlers for various bot commands.
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("addgoal", add_goal))
     app.add_handler(CommandHandler("removegoal", remove_goal))
@@ -44,10 +44,9 @@ async def start_bot():
     async def on_startup(application):
         start_apscheduler(application.bot)
 
-    app.post_init = on_startup
-
     # Instead of run_polling (which closes the loop), use individual startup pieces
     await app.initialize()
+    await on_startup(app)
     await app.start()
     await app.updater.start_polling()
 

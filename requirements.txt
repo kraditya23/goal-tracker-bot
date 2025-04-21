@@ -1,5 +1,5 @@
-python-telegram-bot==22.0
-firebase-admin
-APScheduler
-python-dotenv
-pytz
+python-telegram-bot==22.0         # Telegram bot framework used to build the bot
+firebase-admin==6.7.0             # Firebase Admin SDK for accessing Firestore and authentication
+APScheduler==3.11.0               # Advanced Python scheduler used for daily summaries at midnight
+python-dotenv==1.1.0              # Loads environment variables from a .env file (e.g. bot token)
+pytz==2025.2                      # Timezone handling, used to ensure scheduling happens in IST
