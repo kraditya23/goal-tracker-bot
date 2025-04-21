@@ -341,7 +341,7 @@ async def handle_habit_removal_selection(update: Update, context: ContextTypes.D
             return
 
         habit_doc = habit_docs[index]
-        await habit_doc.delete()
+        habit_doc.delete()
 
         await update.message.reply_text(f"🗑️ Removed habit: {habit_doc.id}")
         context.user_data.pop("habit_removal_list")
